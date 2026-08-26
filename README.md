@@ -11,6 +11,20 @@ La web está bloqueada por fechas, sin backend — todo se calcula con la fecha 
 
 Para cambiar las fechas de desbloqueo, edita el campo `date: "2026-08-28"` (formato `YYYY-MM-DD`) de cada día dentro del array `days` en `index.html`.
 
+### 👁️ Acceso admin (para ti)
+
+Puedes ver todo el contenido en cualquier momento, sin esperar a las fechas, con un enlace secreto:
+
+```
+https://tu-web.netlify.app/?admin=italia2026
+```
+
+Al abrirlo una vez, el navegador queda marcado como "admin" (se guarda en `localStorage`) y verás todo desbloqueado en ese dispositivo/navegador a partir de entonces — aparece un aviso "👁️ Modo admin" en la esquina que puedes tocar para desactivarlo. Tu pareja, al no conocer ni usar ese enlace, seguirá viendo la web bloqueada por fechas con normalidad.
+
+Para cambiar la clave, edita la constante `ADMIN_KEY` dentro del `<script>` de `index.html`. Para desactivar el modo admin manualmente desde la URL: `?admin=off`.
+
+⚠️ Esto es solo una ofuscación (no hay backend ni autenticación real): cualquiera que mire el código fuente de `index.html` podría encontrar la clave. Es suficiente para que tu pareja no vea la sorpresa por accidente, pero no lo compartas ni lo publiques en un repo público si quieres que la clave siga siendo secreta.
+
 ## 📁 Estructura
 
 ```

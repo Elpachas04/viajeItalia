@@ -592,6 +592,39 @@ const days = [
   }
 ];
 
+// ---- ADMIN ACCESS ----
+// Cambia esta clave por la que quieras. Para activar el modo admin, entra una vez
+// con ?admin=TU_CLAVE en la URL (se guarda en este navegador). Para desactivarlo,
+// entra con ?admin=off.
+const ADMIN_KEY = "italia2026";
+
+function checkAdminParam(){
+  const params = new URLSearchParams(window.location.search);
+  if(!params.has('admin')) return;
+  const key = params.get('admin');
+  if(key === ADMIN_KEY){
+    localStorage.setItem('tripAdmin','1');
+  } else if(key === 'off'){
+    localStorage.removeItem('tripAdmin');
+  }
+  params.delete('admin');
+  const cleanUrl = window.location.pathname + (params.toString() ? '?'+params.toString() : '') + window.location.hash;
+  history.replaceState({}, '', cleanUrl);
+}
+function isAdmin(){
+  return localStorage.getItem('tripAdmin') === '1';
+}
+checkAdminParam();
+
+function renderAdminBadge(){
+  if(!isAdmin()) return;
+  const badge = document.createElement('div');
+  badge.textContent = '👁️ Modo admin — toca para salir';
+  badge.style.cssText = 'position:fixed;top:10px;right:10px;z-index:9999;background:#c98a2e;color:#123640;font-size:0.7rem;font-weight:700;padding:0.4rem 0.7rem;border-radius:20px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3);font-family:"Work Sans",sans-serif;';
+  badge.onclick = ()=>{ localStorage.removeItem('tripAdmin'); location.reload(); };
+  document.body.appendChild(badge);
+}
+
 // ---- LOCK LOGIC ----
 function todayLocal(){
   const n = new Date();
@@ -602,7 +635,7 @@ function parseISO(s){
   return new Date(y, m-1, d);
 }
 function isUnlocked(d){
-  return todayLocal() >= parseISO(d.date);
+  return isAdmin() || todayLocal() >= parseISO(d.date);
 }
 function formatDate(iso){
   return parseISO(iso).toLocaleDateString('es-ES', {day:'numeric', month:'long'});
@@ -612,7 +645,7 @@ const firstDay = days[0];
 const today = todayLocal();
 const firstDate = parseISO(firstDay.date);
 
-if(today < firstDate){
+if(today < firstDate && !isAdmin()){
   document.getElementById('globalLock').style.display = 'flex';
   const diffDays = Math.ceil((firstDate - today) / 86400000);
   document.getElementById('countdownNum').textContent = diffDays;
@@ -621,6 +654,7 @@ if(today < firstDate){
   document.getElementById('siteContent').style.display = 'block';
   initSite();
 }
+renderAdminBadge();
 
 function initSite(){
 
