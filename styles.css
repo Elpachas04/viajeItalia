@@ -88,12 +88,9 @@ a{color:var(--lake-dark);}
   margin:2.2rem 0 0;
   padding-bottom:0.7rem;
   border-bottom:2px solid var(--line);
-  scrollbar-width:thin;
-  scrollbar-color:var(--gold) transparent;
+  scrollbar-width:none;
 }
-.top-nav::-webkit-scrollbar{height:5px;}
-.top-nav::-webkit-scrollbar-thumb{background:var(--gold);border-radius:3px;}
-.top-nav::-webkit-scrollbar-track{background:transparent;}
+.top-nav::-webkit-scrollbar{display:none;}
 @media(max-width:480px){.top-nav{gap:1.2rem;}}
 .top-nav-btn{
   flex:0 0 auto;
@@ -126,6 +123,7 @@ a{color:var(--lake-dark);}
   align-items:start;
 }
 @media(max-width:900px){.layout{grid-template-columns:1fr;}}
+.layout > *{min-width:0;}
 
 .map-panel{
   position:sticky; top:1.2rem;
@@ -147,8 +145,9 @@ a{color:var(--lake-dark);}
   overflow-x:auto;
   gap:0.4rem;
   margin:2.5rem 0 1.2rem;
-  padding-bottom:0.3rem;
+  padding-bottom:0.5rem;
   border-bottom:1px solid var(--line);
+  scrollbar-width:thin;
 }
 .day-nav button{
   flex:0 0 auto;
@@ -164,10 +163,6 @@ a{color:var(--lake-dark);}
   white-space:nowrap;
 }
 .day-nav button.active{color:var(--lake-dark);border-bottom-color:var(--gold);}
-.day-nav{scrollbar-width:thin;scrollbar-color:var(--gold) transparent;}
-.day-nav::-webkit-scrollbar{height:5px;}
-.day-nav::-webkit-scrollbar-thumb{background:var(--gold);border-radius:3px;}
-.day-nav::-webkit-scrollbar-track{background:transparent;}
 
 @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
 
@@ -189,7 +184,6 @@ a{color:var(--lake-dark);}
   background:#eee7d3;
   border-radius:20px;
   padding:0.3rem 0.8rem;
-  white-space:nowrap;
 }
 
 .timeline{margin-top:1.4rem;border-left:2px solid var(--line);padding-left:1.2rem;}
@@ -248,13 +242,6 @@ a{color:var(--lake-dark);}
 .alert.red{background:#fbe9e6;border:1px solid #e6a99b;color:#7a2b1c;}
 .alert.yellow{background:#fdf3d6;border:1px solid #e6c66b;color:#6b5310;}
 .alert strong{font-weight:700;}
-.day-status{
-  display:inline-flex;align-items:center;gap:0.35rem;
-  font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;
-  padding:0.25rem 0.6rem;border-radius:20px;margin-bottom:0.5rem;
-}
-.day-status.booked{background:#e4ecdf;color:#3f5c2c;}
-.day-status.pending{background:#fdf3d6;color:#6b5310;}
 .tl-alert{
   margin-top:0.4rem;
   font-size:0.78rem;
@@ -360,34 +347,12 @@ details.dropdown .dropdown-body li{margin-bottom:0.5rem;line-height:1.45;}
 .fact-label{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.06em;font-weight:700;color:var(--lake-dark);}
 .fact-value{font-size:0.86rem;margin-top:0.2rem;color:#3c4744;line-height:1.45;}
 
-.budget-scroll{overflow-x:auto;}
+.budget-scroll{overflow-x:auto;scrollbar-width:none;}
+.budget-scroll::-webkit-scrollbar{display:none;}
 
 footer{text-align:center;padding:2rem 1rem 3rem;font-size:0.78rem;color:#8b968f;}
 
 /* ---------- LOCKS ---------- */
-.global-lock{
-  min-height:100vh;
-  display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(160deg,var(--lake) 0%,var(--lake-dark) 100%);
-  color:var(--paper);
-  text-align:center;
-  padding:2rem;
-}
-.global-lock-inner{max-width:420px;}
-.global-lock .lock-icon{font-size:2.6rem;margin-bottom:1.2rem;opacity:0.9;}
-.global-lock h1{font-size:1.8rem;color:var(--paper);}
-.global-lock p{color:#cdd9d6;margin-top:0.9rem;font-size:0.95rem;line-height:1.6;}
-.global-lock .countdown{
-  margin-top:2rem;
-  font-family:'Fraunces',serif;
-  font-size:2.4rem;
-  color:var(--gold);
-}
-.global-lock .countdown-label{
-  font-size:0.72rem;text-transform:uppercase;letter-spacing:0.12em;
-  color:#9fb3ae;margin-top:0.3rem;
-}
-
 .locked-wrap{position:relative;}
 .locked-blur{
   filter:blur(9px);
@@ -396,12 +361,12 @@ footer{text-align:center;padding:2rem 1rem 3rem;font-size:0.78rem;color:#8b968f;
 }
 .locked-overlay{
   position:absolute; inset:0;
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
   gap:0.5rem;
   background:rgba(244,240,230,0.35);
   border-radius:4px;
   text-align:center;
-  padding:1.5rem;
+  padding:3rem 1.5rem 1.5rem;
 }
 .locked-overlay .lock-icon{font-size:1.7rem;}
 .locked-overlay .unlock-date{
@@ -409,6 +374,13 @@ footer{text-align:center;padding:2rem 1rem 3rem;font-size:0.78rem;color:#8b968f;
   font-weight:600;
   color:var(--lake-dark);
   font-size:1rem;
+}
+.locked-overlay .unlock-countdown{
+  font-family:'Fraunces',serif;
+  font-weight:600;
+  color:var(--gold);
+  font-size:1.1rem;
+  font-variant-numeric:tabular-nums;
 }
 .locked-overlay .unlock-sub{font-size:0.78rem;color:#5c6a63;}
 .day-nav button .tab-lock{margin-right:0.3rem;opacity:0.6;}

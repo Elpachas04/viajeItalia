@@ -3,28 +3,30 @@
 // script), y los estilos en styles.css.
 
 // ---- ADMIN ACCESS ----
-// Cambia esta clave por la que quieras. Para activar el modo admin, entra una vez
-// con ?admin=TU_CLAVE en la URL (se guarda en este navegador). Para desactivarlo,
-// entra con ?admin=off.
+// Cambia esta clave por la que quieras. El modo admin NO se guarda en el
+// navegador: solo está activo mientras la URL de esta carga de página
+// incluya ?admin=TU_CLAVE. Al recargar o volver a entrar sin ese parámetro
+// (aunque sea el mismo navegador) vuelve a estar bloqueado como para
+// cualquier otra persona.
 const ADMIN_KEY = "italia2026";
 
-function checkAdminParam(){
+// Limpia cualquier flag de admin que hubiera quedado guardado por una
+// versión anterior de la web (esta ya no persiste nada).
+localStorage.removeItem('tripAdmin');
+
+const adminActive = new URLSearchParams(window.location.search).get('admin') === ADMIN_KEY;
+function isAdmin(){
+  return adminActive;
+}
+
+// Quita el parámetro de la barra de direcciones (solo estético — adminActive
+// ya quedó fijado arriba, así que esto no afecta al desbloqueo).
+if(adminActive){
   const params = new URLSearchParams(window.location.search);
-  if(!params.has('admin')) return;
-  const key = params.get('admin');
-  if(key === ADMIN_KEY){
-    localStorage.setItem('tripAdmin','1');
-  } else if(key === 'off'){
-    localStorage.removeItem('tripAdmin');
-  }
   params.delete('admin');
   const cleanUrl = window.location.pathname + (params.toString() ? '?'+params.toString() : '') + window.location.hash;
   history.replaceState({}, '', cleanUrl);
 }
-function isAdmin(){
-  return localStorage.getItem('tripAdmin') === '1';
-}
-checkAdminParam();
 
 function renderAdminBadge(){
   if(!isAdmin()) return;
@@ -34,39 +36,49 @@ function renderAdminBadge(){
   const badge = document.createElement('div');
   badge.textContent = '👁️ Modo admin — toca para salir';
   badge.style.cssText = 'position:absolute;top:1rem;right:1rem;z-index:20;background:#c98a2e;color:#123640;font-size:0.68rem;font-weight:700;padding:0.35rem 0.65rem;border-radius:20px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,0.35);font-family:"Work Sans",sans-serif;';
-  badge.onclick = ()=>{ localStorage.removeItem('tripAdmin'); location.reload(); };
+  badge.onclick = ()=>{ window.location.href = window.location.pathname; };
   host.appendChild(badge);
 }
 
 // ---- LOCK LOGIC ----
-function todayLocal(){
-  const n = new Date();
-  return new Date(n.getFullYear(), n.getMonth(), n.getDate());
-}
+// Cada día se desbloquea a las 22:00 de la noche anterior a su fecha
+// (es decir, medianoche de d.date menos 2 horas), no a las 00:00.
 function parseISO(s){
   const [y,m,d] = s.split('-').map(Number);
   return new Date(y, m-1, d);
 }
+function unlockDateTime(iso){
+  const dt = parseISO(iso);
+  dt.setHours(dt.getHours() - 2);
+  return dt;
+}
 function isUnlocked(d){
-  return isAdmin() || todayLocal() >= parseISO(d.date);
+  return isAdmin() || Date.now() >= unlockDateTime(d.date).getTime();
 }
 function formatDate(iso){
-  return parseISO(iso).toLocaleDateString('es-ES', {day:'numeric', month:'long'});
+  const dt = unlockDateTime(iso);
+  const dateStr = dt.toLocaleDateString('es-ES', {day:'numeric', month:'long'});
+  const timeStr = dt.toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+  return `${dateStr} a las ${timeStr}`;
+}
+// Formatea un intervalo en ms como "Xd HHh MMm" (>=24h) o "HHh MMm SSs".
+function formatCountdown(ms){
+  if(ms <= 0) return null;
+  const pad = n => String(n).padStart(2,'0');
+  const totalSeconds = Math.floor(ms/1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if(days >= 1) return `${days}d ${pad(hours)}h ${pad(minutes)}m`;
+  return `${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
 }
 
-const firstDay = days[0];
-const today = todayLocal();
-const firstDate = parseISO(firstDay.date);
-
-if(today < firstDate && !isAdmin()){
-  document.getElementById('globalLock').style.display = 'flex';
-  const diffDays = Math.ceil((firstDate - today) / 86400000);
-  document.getElementById('countdownNum').textContent = diffDays;
-  document.getElementById('countdownLabel').textContent = diffDays === 1 ? 'día para el primer día' : 'días para el primer día';
-} else {
-  document.getElementById('siteContent').style.display = 'block';
-  initSite();
-}
+// El sitio (hero, presupuesto, lo práctico, mapa) se ve siempre. Solo el
+// contenido de cada día del itinerario se bloquea individualmente hasta su
+// hora de desbloqueo (ver renderDay/tickLockStates más abajo).
+document.getElementById('siteContent').style.display = 'block';
+initSite();
 renderAdminBadge();
 
 function initSite(){
@@ -83,6 +95,14 @@ days.forEach((d,i)=>{
   btn.onclick = ()=>selectDay(d.id);
   nav.appendChild(btn);
 });
+
+// El presupuesto solo se ve en modo admin — ni la pestaña ni la sección.
+if(!isAdmin()){
+  const presupuestoBtn = document.querySelector('.top-nav-btn[data-section="presupuesto"]');
+  if(presupuestoBtn) presupuestoBtn.remove();
+  const presupuestoSection = document.getElementById('section-presupuesto');
+  if(presupuestoSection) presupuestoSection.remove();
+}
 
 // ---- TOP NAV (itinerario / presupuesto / lo práctico) ----
 document.querySelectorAll('.top-nav-btn').forEach(btn=>{
@@ -110,12 +130,6 @@ function renderDay(d){
       <span>${a.text}</span>
     </div>`).join('');
 
-  const statusBadge = d.status==='booked'
-    ? `<div class="day-status booked"><span class="status-dot ok"></span>Alojamiento reservado</div>`
-    : d.status==='pending'
-      ? `<div class="day-status pending"><span class="status-dot wait"></span>Alojamiento pendiente de confirmar</div>`
-      : '';
-
   const cardInner = `
     <div class="day-card">
       <div class="day-head">
@@ -125,7 +139,6 @@ function renderDay(d){
         </div>
         <div class="day-drive">${d.drive}</div>
       </div>
-      ${statusBadge}
       ${dayAlerts}
       <div class="timeline">${tl}</div>
       <div class="info-grid">
@@ -143,7 +156,7 @@ function renderDay(d){
       </div>
       ${d.highlights ? `
       <details class="dropdown highlights">
-        <summary>✨ Más cosas bonitas por si os apetece alargar el día</summary>
+        <summary>✨ Más cosas bonitas por si apetece alargar el día</summary>
         <div class="dropdown-body">
           <ul>${d.highlights.map(h=>`<li><strong>${h.name}:</strong> ${h.desc}</li>`).join('')}</ul>
         </div>
@@ -151,12 +164,14 @@ function renderDay(d){
     </div>`;
 
   if(locked){
+    const remaining = unlockDateTime(d.date).getTime() - Date.now();
     content.innerHTML = `
       <div class="locked-wrap">
         <div class="locked-blur">${cardInner}</div>
         <div class="locked-overlay">
           <div class="lock-icon">🔒</div>
           <div class="unlock-date">Se desbloquea el ${formatDate(d.date)}</div>
+          <div class="unlock-countdown" id="dayCountdown">${formatCountdown(remaining) || ''}</div>
           <div class="unlock-sub">Todavía no toca — un poco de paciencia.</div>
         </div>
       </div>`;
@@ -165,39 +180,58 @@ function renderDay(d){
   }
 }
 
+let currentDayId = days[0].id;
+
 function selectDay(id){
   document.querySelectorAll('.day-nav button').forEach(b=>b.classList.toggle('active', b.dataset.id===id));
+  currentDayId = id;
   const d = days.find(x=>x.id===id);
   renderDay(d);
-  map.flyTo(d.coords, 9, {duration:0.6});
-  if(isUnlocked(d)) markers[id].openPopup();
+  // Un día bloqueado no revela su punto en el mapa, ni siquiera al volar hacia él.
+  if(isUnlocked(d)){
+    map.flyTo(d.coords, 9, {duration:0.6});
+    markers[id].openPopup();
+  }
 }
 
 // ---- MAP ----
+// Los puntos de días bloqueados no existen en el mapa todavía — se van
+// revelando (marcador + tramo de ruta) en el momento en que cada día
+// desbloquea, sin recargar la página (ver tickLockStates más abajo).
 const map = L.map('map', {scrollWheelZoom:false}).setView([45.0,10.8], 6);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom:18,
   attribution:'&copy; OpenStreetMap contributors'
 }).addTo(map);
 
-const markers = {};
-const latlngs = [];
-days.forEach((d,i)=>{
-  latlngs.push(d.coords);
-  const locked = !isUnlocked(d);
-  const icon = L.divIcon({
+function dayMarkerIcon(i){
+  return L.divIcon({
     className:'',
-    html:`<div style="background:#c98a2e;color:#123640;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Work Sans',sans-serif;font-weight:700;font-size:12px;border:2px solid #f4f0e6;box-shadow:0 2px 6px rgba(0,0,0,0.35);">${locked ? '🔒' : (i+1)}</div>`,
+    html:`<div style="background:#c98a2e;color:#123640;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Work Sans',sans-serif;font-weight:700;font-size:12px;border:2px solid #f4f0e6;box-shadow:0 2px 6px rgba(0,0,0,0.35);">${i+1}</div>`,
     iconSize:[24,24],
     iconAnchor:[12,12]
   });
-  const m = L.marker(d.coords, {icon}).addTo(map)
-    .bindPopup(locked ? `<strong>${d.tab}</strong><br>Se desbloquea el ${formatDate(d.date)}` : `<strong>${d.title.replace(/<\/?em>/g,'')}</strong><br>${d.tab}`);
+}
+
+const markers = {};
+const routeLine = L.polyline([], {color:'#1d4e5f', weight:2, dashArray:'6 6', opacity:0.7}).addTo(map);
+
+function updateRouteLine(){
+  routeLine.setLatLngs(days.filter(d=>markers[d.id]).map(d=>d.coords));
+}
+
+function revealMarker(d, i){
+  if(markers[d.id]) return;
+  const m = L.marker(d.coords, {icon: dayMarkerIcon(i)}).addTo(map)
+    .bindPopup(`<strong>${d.title.replace(/<\/?em>/g,'')}</strong><br>${d.tab}`);
   m.on('click', ()=>selectDay(d.id));
   markers[d.id] = m;
-});
+  updateRouteLine();
+}
 
-L.polyline(latlngs, {color:'#1d4e5f', weight:2, dashArray:'6 6', opacity:0.7}).addTo(map);
+days.forEach((d,i)=>{
+  if(isUnlocked(d)) revealMarker(d, i);
+});
 
 // Leaflet needs an explicit nudge whenever its container changes size
 // (sticky/grid reflow, orientation change, fonts loading) or tiles render
@@ -215,5 +249,34 @@ if(document.fonts && document.fonts.ready){
 setTimeout(refreshMapSize, 300);
 
 renderDay(days[0]);
+
+// Refresca cada segundo, sin recargar: tabs y marcadores bloqueados que
+// pasan a desbloqueados, y la cuenta atrás en vivo del día abierto.
+function tickLockStates(){
+  document.querySelectorAll('#dayNav button').forEach(btn=>{
+    const d = days.find(x=>x.id===btn.dataset.id);
+    const locked = !isUnlocked(d);
+    const wantHtml = (locked ? '<span class="tab-lock">🔒</span>' : '') + d.tab;
+    if(btn.innerHTML !== wantHtml) btn.innerHTML = wantHtml;
+  });
+
+  days.forEach((d,i)=>{
+    if(!markers[d.id] && isUnlocked(d)) revealMarker(d, i);
+  });
+
+  const current = days.find(x=>x.id===currentDayId);
+  if(!current) return;
+  const stillLocked = !isUnlocked(current);
+  if(!stillLocked){
+    if(document.querySelector('.locked-overlay')) renderDay(current);
+    return;
+  }
+  const countdownEl = document.getElementById('dayCountdown');
+  if(countdownEl){
+    const remaining = unlockDateTime(current.date).getTime() - Date.now();
+    countdownEl.textContent = formatCountdown(remaining) || '';
+  }
+}
+setInterval(tickLockStates, 1000);
 
 } // /initSite
