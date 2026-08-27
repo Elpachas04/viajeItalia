@@ -1,6 +1,6 @@
 # Nuestra ruta por Italia 🇮🇹
 
-Web de un solo archivo con el itinerario del viaje (28 ago – 4 sep 2026): mapa interactivo, horario día a día, alojamientos y presupuesto.
+Web estática con el itinerario del viaje (28 ago – 4 sep 2026): mapa interactivo, horario día a día, alojamientos y presupuesto.
 
 ## 🔒 Sistema de sorpresa
 
@@ -9,7 +9,7 @@ La web está bloqueada por fechas, sin backend — todo se calcula con la fecha 
 - **Antes del 28 de agosto de 2026**: solo se ve una pantalla con candado y cuenta atrás. Nada del contenido es visible.
 - **A partir del 28 de agosto**: la web se abre, pero cada día del itinerario que todavía no ha llegado aparece borroso y bloqueado, con un aviso de "se desbloquea el [fecha]". Cada día se destapa solo, en su fecha.
 
-Para cambiar las fechas de desbloqueo, edita el campo `date: "2026-08-28"` (formato `YYYY-MM-DD`) de cada día dentro del array `days` en `index.html`.
+Para cambiar las fechas de desbloqueo, edita el campo `date: "2026-08-28"` (formato `YYYY-MM-DD`) de cada día dentro del array `days` en `days.js`.
 
 ### 👁️ Acceso admin (para ti)
 
@@ -21,7 +21,7 @@ https://tu-web.netlify.app/?admin=italia2026
 
 Al abrirlo una vez, el navegador queda marcado como "admin" (se guarda en `localStorage`) y verás todo desbloqueado en ese dispositivo/navegador a partir de entonces — aparece un aviso "👁️ Modo admin" en la esquina que puedes tocar para desactivarlo. Tu pareja, al no conocer ni usar ese enlace, seguirá viendo la web bloqueada por fechas con normalidad.
 
-Para cambiar la clave, edita la constante `ADMIN_KEY` dentro del `<script>` de `index.html`. Para desactivar el modo admin manualmente desde la URL: `?admin=off`.
+Para cambiar la clave, edita la constante `ADMIN_KEY` al principio de `app.js`. Para desactivar el modo admin manualmente desde la URL: `?admin=off`.
 
 ⚠️ Esto es solo una ofuscación (no hay backend ni autenticación real): cualquiera que mire el código fuente de `index.html` podría encontrar la clave. Es suficiente para que tu pareja no vea la sorpresa por accidente, pero no lo compartas ni lo publiques en un repo público si quieres que la clave siga siendo secreta.
 
@@ -29,11 +29,14 @@ Para cambiar la clave, edita la constante `ADMIN_KEY` dentro del `<script>` de `
 
 ```
 .
-├── index.html   ← toda la web (HTML + CSS + JS en un solo archivo)
+├── index.html   ← estructura de la página (HTML)
+├── styles.css   ← todos los estilos
+├── days.js      ← contenido del itinerario (el array `days`) — lo que más se edita
+├── app.js       ← lógica: acceso admin, bloqueo por fechas, render de cada día y el mapa
 └── README.md    ← este archivo
 ```
 
-No hay build ni dependencias que instalar — es HTML estático puro. Las únicas librerías externas (Leaflet para el mapa, Google Fonts) se cargan desde CDN dentro del propio `index.html`.
+No hay build ni dependencias que instalar — es HTML/CSS/JS estático puro, solo archivos sueltos servidos tal cual. Las únicas librerías externas (Leaflet para el mapa, Google Fonts) se cargan desde CDN dentro de `index.html`.
 
 ## 🚀 Desplegar en Netlify
 
@@ -48,13 +51,13 @@ Cualquier `git push` a la rama principal vuelve a desplegar automáticamente.
 
 ## ✏️ Editar el contenido
 
-Todo el contenido (horarios, alojamientos, comida, avisos, "más cosas para ver") vive en el array `const days = [...]` dentro de la etiqueta `<script>` al final de `index.html`. Cada día es un objeto con:
+Todo el contenido (horarios, alojamientos, comida, avisos, "más cosas para ver") vive en el array `const days = [...]` de `days.js`. Cada día es un objeto con:
 
 - `date` — fecha de desbloqueo (`YYYY-MM-DD`)
 - `title`, `drive`, `coords` — cabecera del día y coordenadas para el mapa
 - `alerts` — avisos generales del día (🔴 urgente / 🟡 consejo)
 - `timeline` — lista de horarios con su nota y, opcionalmente, un aviso propio
 - `sleep`, `eat` — alojamiento y comida
-- `highlights` — lista opcional de cosas extra que ver cerca
+- `highlights` — lista opcional de cosas extra que ver cerca (se muestra como desplegable)
 
-La tabla de presupuesto está más abajo en el HTML, dentro de `<div class="budget-box">`.
+La tabla de presupuesto y los datos fijos de "Lo práctico" están directamente en `index.html`, dentro de `<div class="budget-box">` y `<div class="fact-grid">`.
